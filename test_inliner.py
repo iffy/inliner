@@ -17,9 +17,9 @@ class EverythingTest(TestCase):
         b = etree.tostring(soupparser.fromstring(b))
         self.assertEqual(a, b, *args, **kwargs)
 
-    def transform(self, text, root_dir='.'):
+    def transform(self, text, root_dir='.', prefix=None):
         fh_o = StringIO()
-        transformHTML(StringIO(text), fh_o, root_dir=root_dir)
+        transformHTML(StringIO(text), fh_o, root_dir=root_dir, prefix=prefix)
         return fh_o.getvalue()
 
     def test_images(self):
@@ -99,5 +99,18 @@ class EverythingTest(TestCase):
         expected = "<style>@font-face {{ src: local('Foo'), url(data:;base64,{0}) format('woff2'); }}</style>".format(
             'The contents'.encode('base64').replace('\n', ''))
         self.assertEquivalentHTML(self.transform(src, tmp.path),
+            expected)
+
+    def test_prefixOnly(self):
+        """
+        You can specify a prefix to all relative resources.
+        """
+        src = ('<link href="foo.css" rel="stylesheet" />'
+               '<img src="../something.jpg">'
+               '<img src="http://foo.com/image.jpg">')
+        expected = ('<link href="root/foo.css" rel="stylesheet" />'
+                    '<img src="root/../something.jpg">'
+                    '<img src="http://foo.com/image.jpg">')
+        self.assertEquivalentHTML(self.transform(src, prefix='root/'),
             expected)
 
