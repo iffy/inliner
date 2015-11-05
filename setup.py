@@ -7,7 +7,7 @@ from distutils.core import setup
 
 setup(
     name='inliner',
-    version='0.2.0',
+    version='0.2.1',
     description='Inlines external HTML resources',
     author='Matt Haggard',
     author_email='haggardii@gmail.com',
