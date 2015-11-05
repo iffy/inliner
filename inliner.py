@@ -31,17 +31,27 @@ def toDataURL(content, media_type=''):
     return 'data:{media_type};base64,{encoded}'.format(**locals())     
 
 
-def transformHTML(i, o, root_dir='.'):
+def transformHTML(i, o, root_dir='.', prefix=None):
+    """
+    @param root_dir: Path to look for resources from.
+    @param prefix: If provided, don't inline stuff.  Instead, prepend
+        the prefix to relative paths.
+    """
     root = soupparser.parse(i)
     html = root.getroot()
 
     # links (css)
     for link in html.xpath('//link'):
         href = link.attrib.get('href', '')
-        loaded = loadThing(href, root_dir)
-        style_tag = etree.Element('style')
-        style_tag.text = loaded['content']
-        link.getparent().replace(link, style_tag)
+        if prefix:
+            # prefix
+            link.attrib['href'] = prefix + href
+        else:
+            # inline
+            loaded = loadThing(href, root_dir)
+            style_tag = etree.Element('style')
+            style_tag.text = loaded['content']
+            link.getparent().replace(link, style_tag)
 
     # css
     r_import = re.compile(r'(@import\s+url\((.*?)\)\s*;)')
@@ -53,15 +63,21 @@ def transformHTML(i, o, root_dir='.'):
             if not imports:
                 break
             for rule, url in imports:
+                # inline
                 loaded = loadThing(url, root_dir)
                 style.text = style.text.replace(rule, loaded['content'])
 
         # other urls
         urls = r_url.findall(style.text)
         for match, url in urls:
-            loaded = loadThing(url, root_dir)
-            style.text = style.text.replace(match,
-                'url('+toDataURL(**loaded)+')')
+            if prefix:
+                # prefix
+                pass
+            else:
+                # inline
+                loaded = loadThing(url, root_dir)
+                style.text = style.text.replace(match,
+                    'url('+toDataURL(**loaded)+')')
 
     # images
     for image in html.xpath('//img'):
@@ -69,16 +85,25 @@ def transformHTML(i, o, root_dir='.'):
         if src.startswith('data:'):
             # already a data url
             continue
-
-        loaded = loadThing(src, root_dir)
-        image.attrib['src'] = toDataURL(**loaded)
+        if prefix:
+            # prefix
+            if src.startswith('//') or src.startswith('http:') or src.startswith('https:'):
+                pass
+            else:
+                image.attrib['src'] = prefix + src
+        else:
+            # inline
+            loaded = loadThing(src, root_dir)
+            image.attrib['src'] = toDataURL(**loaded)
     o.write(etree.tostring(html))
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--path', '-p', default='.',
         help='Path from which relative files will be resolved.')
+    ap.add_argument('--prefix', '-P', default=None,
+        help='String to preppend to all relative paths.')
 
     args = ap.parse_args()
-    transformHTML(sys.stdin, sys.stdout, args.path)
+    transformHTML(sys.stdin, sys.stdout, args.path, args.prefix)
 
