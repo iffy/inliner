@@ -99,7 +99,7 @@ def transformHTML(i, o, root_dir='.', prefix=None, exclude=None):
                 # inline
                 loaded = loadThing(src, root_dir)
                 image.attrib['src'] = toDataURL(**loaded)
-    o.write(etree.tostring(html))
+    o.write(etree.tostring(html, method='html'))
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()

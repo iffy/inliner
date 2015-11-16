@@ -114,3 +114,11 @@ class EverythingTest(TestCase):
         self.assertEquivalentHTML(self.transform(src, prefix='root/'),
             expected)
 
+    def test_prefixOnly_styleBlockEscaping(self):
+        """
+        When prefixing stuff, it shouldn't ruin encoded characters.
+        """
+        src = ('<style>foo > bar { color: #fff; }</style>')
+        transformed = self.transform(src, prefix='foo/')
+        self.assertIn('foo > bar', transformed)
+
